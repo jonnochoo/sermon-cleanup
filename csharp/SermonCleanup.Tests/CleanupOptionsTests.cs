@@ -13,8 +13,8 @@ public class CleanupOptionsTests
             OutputFile = "out.mp3"
         };
 
-        Assert.Equal(-16, options.TargetLufs);
-        Assert.Equal(-1.5, options.TargetTp);
-        Assert.Equal(11, options.TargetLra);
+        Assert.Equal(-16, options.TargetLufs.Value);
+        Assert.Equal(-1.5, options.TargetTp.Value);
+        Assert.Equal(11, options.TargetLra.Value);
     }
 }
