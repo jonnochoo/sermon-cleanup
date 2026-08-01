@@ -9,6 +9,22 @@ internal static class FileBrowser
     private const string ManualEntryPath = "\0manual";
     private const string ParentDirPath = "\0parent";
 
+    /// <summary>The user's Downloads folder, falling back to their home directory or the current directory if it can't be found.</summary>
+    public static string GetDefaultStartDirectory()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrEmpty(home))
+        {
+            var downloads = Path.Combine(home, "Downloads");
+            if (Directory.Exists(downloads))
+                return downloads;
+        }
+
+        return !string.IsNullOrEmpty(home) && Directory.Exists(home)
+            ? home
+            : Directory.GetCurrentDirectory();
+    }
+
     public static string SelectInputFile(string startDirectory)
     {
         var currentDir = new DirectoryInfo(startDirectory);
@@ -25,7 +41,9 @@ internal static class FileBrowser
             try
             {
                 subDirs = currentDir.GetDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase);
-                files = currentDir.GetFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
+                files = currentDir.GetFiles()
+                    .Where(f => AudioFileTypes.IsAudioFile(f.FullName))
+                    .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
             }
             catch (UnauthorizedAccessException)
             {
@@ -38,13 +56,7 @@ internal static class FileBrowser
                 choices.Add(($"[blue]{Markup.Escape(dir.Name)}/[/]", dir.FullName));
 
             foreach (var file in files)
-            {
-                var isAudio = AudioFileTypes.IsAudioFile(file.FullName);
-                var label = isAudio
-                    ? $"[green]{Markup.Escape(file.Name)}[/]"
-                    : $"[grey]{Markup.Escape(file.Name)}[/]";
-                choices.Add((label, file.FullName));
-            }
+                choices.Add(($"[green]{Markup.Escape(file.Name)}[/]", file.FullName));
 
             choices.Add(("[yellow]Type a path manually...[/]", ManualEntryPath));
 
@@ -65,10 +77,17 @@ internal static class FileBrowser
 
                 case ManualEntryPath:
                     var manualPath = AnsiConsole.Ask<string>("Enter a file path:");
-                    if (File.Exists(manualPath))
-                        return Path.GetFullPath(manualPath);
-                    AnsiConsole.MarkupLine($"[red]File not found:[/] {Markup.Escape(manualPath)}");
-                    continue;
+                    if (!File.Exists(manualPath))
+                    {
+                        AnsiConsole.MarkupLine($"[red]File not found:[/] {Markup.Escape(manualPath)}");
+                        continue;
+                    }
+                    if (!AudioFileTypes.IsAudioFile(manualPath))
+                    {
+                        AnsiConsole.MarkupLine($"[red]Unsupported file type:[/] {Markup.Escape(Path.GetExtension(manualPath))}");
+                        continue;
+                    }
+                    return Path.GetFullPath(manualPath);
 
                 default:
                     if (Directory.Exists(selected))
