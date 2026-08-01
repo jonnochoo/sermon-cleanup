@@ -1,9 +1,14 @@
 using System.Globalization;
+using System.Reflection;
 using SermonCleanup.Cli;
 using SermonCleanup.Core;
 using Spectre.Console;
 
+var version = Assembly.GetExecutingAssembly().GetName().Version;
+var versionText = version is null ? "dev" : $"v{version.Major}.{version.Minor}.{version.Build}";
+
 AnsiConsole.Write(new FigletText("Sermon Cleanup").Color(Color.SteelBlue1));
+AnsiConsole.MarkupLine($"[grey]{versionText}[/]");
 AnsiConsole.MarkupLine("[grey]Highpass filter, clip mitigation, compression, loudness normalization, and silence trimming — powered by ffmpeg.[/]");
 AnsiConsole.WriteLine();
 
