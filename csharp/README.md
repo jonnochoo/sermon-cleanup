@@ -46,9 +46,10 @@ dotnet publish SermonCleanup.Cli -c Release -r win-x64 --self-contained -p:Publi
 ## Building and testing
 
 ```
-.\build.ps1
+dotnet build SermonCleanup.sln -c Release
+dotnet test SermonCleanup.sln -c Release --no-build
 ```
 
-Restores, builds, and runs the test suite. Warnings are treated as errors solution-wide (see
-`Directory.Build.props`), so this doubles as a lint check. Pass `-Configuration Release` to build
-in release mode.
+Warnings are treated as errors solution-wide (see `Directory.Build.props`), so a clean build
+doubles as a lint check. The same two commands run in CI on every push/PR that touches `csharp/**`
+— see [`.github/workflows/csharp-build.yml`](../.github/workflows/csharp-build.yml).
