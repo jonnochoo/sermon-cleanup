@@ -17,28 +17,52 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
+        PrintBanner();
+
+        if (!SermonCleaner.IsFfmpegAvailable())
+            return ReportMissingFfmpeg();
+
+        var inputFile = ResolveInputFile(settings);
+        var options = PromptForOptions(inputFile);
+
+        PrintSummary(options);
+        if (!AnsiConsole.Confirm("Proceed with cleanup?"))
+        {
+            AnsiConsole.MarkupLine("[yellow]Cancelled.[/]");
+            return (int)ExitCode.Success;
+        }
+
+        return await RunCleanupAsync(options, cancellationToken);
+    }
+
+    private static void PrintBanner()
+    {
         AnsiConsole.Write(new FigletText("Sermon Cleanup").Color(Color.SteelBlue1));
         AnsiConsole.MarkupLine($"[grey]v{AppVersion.Current}[/]");
         AnsiConsole.MarkupLine("[grey]Highpass filter, clip mitigation, compression, loudness normalization, and silence trimming — powered by ffmpeg.[/]");
         AnsiConsole.WriteLine();
+    }
 
-        if (!SermonCleaner.IsFfmpegAvailable())
-        {
-            AnsiConsole.MarkupLine("[red]ffmpeg was not found in PATH.[/] Install it from https://ffmpeg.org/download.html and try again.");
-            return (int)ExitCode.Error;
-        }
+    private static int ReportMissingFfmpeg()
+    {
+        AnsiConsole.MarkupLine("[red]ffmpeg was not found in PATH.[/] Install it from https://ffmpeg.org/download.html and try again.");
+        return (int)ExitCode.Error;
+    }
 
-        string inputFile;
+    private static string ResolveInputFile(Settings settings)
+    {
         if (settings.InputFile is not null && File.Exists(settings.InputFile))
         {
-            inputFile = Path.GetFullPath(settings.InputFile);
+            var inputFile = Path.GetFullPath(settings.InputFile);
             AnsiConsole.MarkupLine($"Input file: [green]{Markup.Escape(inputFile)}[/]");
-        }
-        else
-        {
-            inputFile = FileBrowser.SelectInputFile(FileBrowser.GetDefaultStartDirectory());
+            return inputFile;
         }
 
+        return FileBrowser.SelectInputFile(FileBrowser.GetDefaultStartDirectory());
+    }
+
+    private static CleanupOptions PromptForOptions(string inputFile)
+    {
         var defaultOutput = Path.Combine(
             Path.GetDirectoryName(inputFile) ?? ".",
             $"{Path.GetFileNameWithoutExtension(inputFile)}_clean.mp3");
@@ -55,7 +79,7 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         var targetLra = AnsiConsole.Prompt(
             new TextPrompt<double>("Target loudness range [grey](LRA)[/]:").DefaultValue(11.0));
 
-        var options = new CleanupOptions
+        return new CleanupOptions
         {
             InputFile = inputFile,
             OutputFile = outputFile,
@@ -63,7 +87,10 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
             TargetTp = targetTp,
             TargetLra = targetLra
         };
+    }
 
+    private static void PrintSummary(CleanupOptions options)
+    {
         var summary = new Table().Border(TableBorder.Rounded).AddColumn("Setting").AddColumn("Value");
         summary.AddRow("Input", Markup.Escape(options.InputFile));
         summary.AddRow("Output", Markup.Escape(options.OutputFile));
@@ -71,13 +98,10 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         summary.AddRow("Target TP", $"{options.TargetTp.ToString(CultureInfo.InvariantCulture)} dBTP");
         summary.AddRow("Target LRA", options.TargetLra.ToString(CultureInfo.InvariantCulture));
         AnsiConsole.Write(summary);
+    }
 
-        if (!AnsiConsole.Confirm("Proceed with cleanup?"))
-        {
-            AnsiConsole.MarkupLine("[yellow]Cancelled.[/]");
-            return (int)ExitCode.Success;
-        }
-
+    private static async Task<int> RunCleanupAsync(CleanupOptions options, CancellationToken cancellationToken)
+    {
         var cleaner = new SermonCleaner();
         LoudnessStats? stats = null;
 
