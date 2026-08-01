@@ -25,7 +25,7 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         if (!SermonCleaner.IsFfmpegAvailable())
         {
             AnsiConsole.MarkupLine("[red]ffmpeg was not found in PATH.[/] Install it from https://ffmpeg.org/download.html and try again.");
-            return 1;
+            return (int)ExitCode.Error;
         }
 
         string inputFile;
@@ -75,7 +75,7 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         if (!AnsiConsole.Confirm("Proceed with cleanup?"))
         {
             AnsiConsole.MarkupLine("[yellow]Cancelled.[/]");
-            return 0;
+            return (int)ExitCode.Success;
         }
 
         var cleaner = new SermonCleaner();
@@ -101,7 +101,7 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
                 AnsiConsole.MarkupLine("[grey]ffmpeg output:[/]");
                 AnsiConsole.WriteLine(ex.Details);
             }
-            return 1;
+            return (int)ExitCode.Error;
         }
 
         AnsiConsole.MarkupLine($"[green]Done![/] Output saved to [bold]{Markup.Escape(options.OutputFile)}[/]");
@@ -115,6 +115,6 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
             AnsiConsole.Write(statsTable);
         }
 
-        return 0;
+        return (int)ExitCode.Success;
     }
 }

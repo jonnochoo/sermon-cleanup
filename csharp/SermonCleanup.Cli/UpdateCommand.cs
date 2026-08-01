@@ -14,7 +14,7 @@ internal sealed class UpdateCommand : AsyncCommand
                 "[yellow]Self-update only works for an installed sermon-cleanup.exe[/] " +
                 "(not when running via 'dotnet run'). Reinstall with:");
             AnsiConsole.MarkupLine("[grey]irm https://raw.githubusercontent.com/jonnochoo/sermon-cleanup/main/install.ps1 | iex[/]");
-            return 1;
+            return (int)ExitCode.Error;
         }
 
         using var http = new HttpClient();
@@ -29,19 +29,19 @@ internal sealed class UpdateCommand : AsyncCommand
         catch (SermonCleanupException ex)
         {
             AnsiConsole.MarkupLine($"[red]Error:[/] {Markup.Escape(ex.Message)}");
-            return 1;
+            return (int)ExitCode.Error;
         }
 
         if (!SelfUpdater.IsUpdateAvailable(AppVersion.Current, release.Version))
         {
             AnsiConsole.MarkupLine($"[green]Already up to date[/] (v{AppVersion.Current}).");
-            return 0;
+            return (int)ExitCode.Success;
         }
 
         if (!AnsiConsole.Confirm($"Update from v{AppVersion.Current} to v{release.Version}?"))
         {
             AnsiConsole.MarkupLine("[yellow]Cancelled.[/]");
-            return 0;
+            return (int)ExitCode.Success;
         }
 
         try
@@ -53,10 +53,10 @@ internal sealed class UpdateCommand : AsyncCommand
         catch (SermonCleanupException ex)
         {
             AnsiConsole.MarkupLine($"[red]Error:[/] {Markup.Escape(ex.Message)}");
-            return 1;
+            return (int)ExitCode.Error;
         }
 
         AnsiConsole.MarkupLine($"[green]Updated to v{release.Version}.[/] Restart sermon-cleanup to use the new version.");
-        return 0;
+        return (int)ExitCode.Success;
     }
 }
