@@ -3,3 +3,7 @@
 *.exe
 sermon-cleanup
 /output/
+
+# .NET
+csharp/**/bin/
+csharp/**/obj/
