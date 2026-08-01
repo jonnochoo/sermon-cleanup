@@ -21,7 +21,7 @@ if (args.Length > 0 && File.Exists(args[0]))
 }
 else
 {
-    inputFile = FileBrowser.SelectInputFile(Directory.GetCurrentDirectory());
+    inputFile = FileBrowser.SelectInputFile(FileBrowser.GetDefaultStartDirectory());
 }
 
 var defaultOutput = Path.Combine(
