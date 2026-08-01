@@ -29,8 +29,10 @@ No build step — edit and run directly:
 ```
 dotnet build SermonCleanup.sln -c Release
 dotnet test SermonCleanup.sln -c Release --no-build
-dotnet run --project SermonCleanup.Cli                    # full interactive flow
-dotnet run --project SermonCleanup.Cli -- "sermon.wav"    # skip the file browser
+dotnet run --project SermonCleanup.Cli -- clean                    # full interactive flow
+dotnet run --project SermonCleanup.Cli -- clean "sermon.wav"       # skip the file browser
+dotnet run --project SermonCleanup.Cli -- update                   # self-update
+dotnet run --project SermonCleanup.Cli -- --help                   # lists commands (no default command is set)
 ```
 
 Run a single test class/method with the standard xUnit filter, e.g.:
@@ -105,13 +107,24 @@ The C# solution is deliberately split so domain logic never depends on the conso
     "supported" — both the CLI file browser and any future variant should call into this rather
     than re-listing extensions.
 
-- **`SermonCleanup.Cli`** — Spectre.Console only. `Program.cs` (top-level statements) drives
-  prompts/summary/progress/results; `FileBrowser.SelectInputFile` is a self-contained interactive
-  directory walker (default start dir: `FileBrowser.GetDefaultStartDirectory()`, which is the
-  user's Downloads folder, falling back to home then cwd). The CLI must not contain ffmpeg
-  arguments or parsing logic — that belongs in Core. Interactive prompts require a real console
-  (Spectre.Console can't read piped/redirected stdin), so non-interactive repros of Core behavior
-  should call `SermonCleaner` directly rather than driving `Program.cs`.
+- **`SermonCleanup.Cli`** — Spectre.Console + Spectre.Console.Cli. `Program.cs` just builds a
+  `CommandApp`, registers `CleanCommand`/`UpdateCommand` via `config.AddCommand<T>(name)`, and sets
+  `SetApplicationVersion(AppVersion.Current)`. **No default command is set on purpose** — that's
+  what makes bare `sermon-cleanup`/`--help` print the generated command list instead of launching
+  straight into `clean`. A new command is just another `AddCommand<T>` call. Note:
+  `ExecuteAsync` on this Spectre.Console.Cli version takes a `CancellationToken` and is `protected
+  override`, not `public override`.
+  - `CleanCommand` holds the interactive flow (prompts/summary/progress/results) that used to live
+    in `Program.cs` directly; `FileBrowser.SelectInputFile` is the interactive directory walker
+    (default start dir: `FileBrowser.GetDefaultStartDirectory()`, the user's Downloads folder).
+  - `UpdateCommand` calls `SelfUpdater` (Core) to check/apply an update, and refuses to run unless
+    `SelfUpdater.TryGetCurrentExecutablePath` confirms the process is a published exe rather than
+    `dotnet`-hosted (`dotnet run`) — there's nothing sensible to self-update in that case.
+  - Neither command contains ffmpeg args or update-download logic — that belongs in Core.
+    Interactive prompts require a real console (can't read piped stdin), so non-interactive repros
+    should call `SermonCleaner`/`SelfUpdater` directly rather than driving a command.
 
-- **`SermonCleanup.Tests`** — xUnit, references only `SermonCleanup.Core` (no UI to test). Keep
-  new Core logic unit-testable without invoking a real ffmpeg process where possible.
+- **`SermonCleanup.Tests`** — xUnit, references only `SermonCleanup.Core` (no UI to test).
+  `SelfUpdater.IsUpdateAvailable`/`TryGetCurrentExecutablePath` are pure and tested directly;
+  `GetLatestReleaseAsync`/`ApplyUpdateAsync` were instead verified manually against the real GitHub
+  API/release during development rather than mocked.

@@ -1,18 +1,31 @@
 # Sermon Cleanup (C#)
 
-An interactive console version of `clean-sermon.ps1`, built with [Spectre.Console](https://spectreconsole.net/).
-Same filter chain, same ffmpeg dependency — this just adds an interactive picker for the input file
-and prompts for the rest of the settings instead of positional/named parameters.
+An interactive console version of `clean-sermon.ps1`, built with [Spectre.Console](https://spectreconsole.net/)
+(interactive prompts/file browser) and [Spectre.Console.Cli](https://spectreconsole.net/cli/) (argument
+parsing, subcommands, `--help`/`--version`). Same filter chain, same ffmpeg dependency as the
+PowerShell script — this adds an interactive picker for the input file and prompts for the rest of
+the settings instead of positional/named parameters.
 
 ## Structure
 
 - **`SermonCleanup.Core`** — domain logic: builds the ffmpeg filter chain, runs the two-pass
-  loudnorm analysis/render, parses ffmpeg's JSON output. No console or UI code; it only knows
-  about `CleanupOptions` in and a `CleanupResult` (or `SermonCleanupException`) out.
-- **`SermonCleanup.Cli`** — the Spectre.Console front end: the interactive file browser, prompts
-  for output path/loudness targets, progress spinner, and result tables. Contains no ffmpeg logic
-  itself — it only calls into `SermonCleanup.Core`.
+  loudnorm analysis/render, parses ffmpeg's JSON output, and checks/applies self-updates from
+  GitHub releases (`SelfUpdater`). No console or UI code; it only knows about `CleanupOptions` in
+  and a `CleanupResult` (or `SermonCleanupException`) out.
+- **`SermonCleanup.Cli`** — the Spectre.Console front end: `Program.cs` just wires up a
+  `Spectre.Console.Cli` `CommandApp` with two commands, `CleanCommand` (the interactive file
+  browser, prompts, progress spinner, result tables) and `UpdateCommand` (checks/applies an
+  update). Contains no ffmpeg or update logic itself — it only calls into `SermonCleanup.Core`.
 - **`SermonCleanup.Tests`** — xUnit tests for `SermonCleanup.Core`.
+
+## Commands
+
+- `sermon-cleanup clean [INPUT]` — the interactive cleanup flow. `INPUT` is optional; omit it to
+  pick a file from the interactive browser.
+- `sermon-cleanup update` — checks the latest GitHub release and, if newer, downloads and swaps in
+  the new `sermon-cleanup.exe` (only works for an installed exe, not `dotnet run`).
+- `sermon-cleanup` (no arguments) or `--help` — lists the commands above.
+- `sermon-cleanup --version` — prints the installed version.
 
 ## Requirements
 
@@ -28,13 +41,14 @@ latest [release](../../releases) and adds it to your PATH):
 irm https://raw.githubusercontent.com/jonnochoo/sermon-cleanup/main/install.ps1 | iex
 ```
 
-Then run `sermon-cleanup` from a new terminal. Re-running the command upgrades in place.
+Then run `sermon-cleanup clean` from a new terminal. To upgrade later, run `sermon-cleanup update`
+instead of re-running the install command.
 
 ## Usage
 
 ```
 cd csharp
-dotnet run --project SermonCleanup.Cli
+dotnet run --project SermonCleanup.Cli -- clean
 ```
 
 This launches an interactive file browser (starting in your Downloads folder, filtered to
@@ -45,7 +59,7 @@ script (`-16`, `-1.5`, `11`).
 You can also pass the input file directly to skip the browser:
 
 ```
-dotnet run --project SermonCleanup.Cli -- "sermon.wav"
+dotnet run --project SermonCleanup.Cli -- clean "sermon.wav"
 ```
 
 ### Publishing a standalone executable
