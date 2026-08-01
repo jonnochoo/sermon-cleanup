@@ -1,6 +1,6 @@
 # Sermon Cleanup (C#)
 
-An interactive console version of `clean-sermon.ps1`, built with [Spectre.Console](https://spectreconsole.net/)
+An interactive console version of [`../powershell/clean-sermon.ps1`](../powershell/clean-sermon.ps1), built with [Spectre.Console](https://spectreconsole.net/)
 (interactive prompts/file browser) and [Spectre.Console.Cli](https://spectreconsole.net/cli/) (argument
 parsing, subcommands, `--help`/`--version`). Same filter chain, same ffmpeg dependency as the
 PowerShell script — this adds an interactive picker for the input file and prompts for the rest of

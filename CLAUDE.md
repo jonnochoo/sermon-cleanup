@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Two independent implementations of the same sermon-audio cleanup pipeline, kept in sync
 conceptually but not sharing code:
 
-- `clean-sermon.ps1` — a single-file PowerShell script (the original).
+- `powershell/` — a single-file PowerShell script (the original).
 - `csharp/` — an interactive C# console rewrite (Spectre.Console front end).
 
 Both shell out to `ffmpeg` and must be kept behaviorally equivalent: same filter chain, same
@@ -16,7 +16,7 @@ defaults in one, check whether the other needs the same change.
 
 ## Commands
 
-### PowerShell variant
+### PowerShell variant (run from `powershell/`)
 
 No build step — edit and run directly:
 
