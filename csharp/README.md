@@ -3,8 +3,9 @@
 An interactive console version of [`../powershell/clean-sermon.ps1`](../powershell/clean-sermon.ps1), built with [Spectre.Console](https://spectreconsole.net/)
 (interactive prompts/file browser) and [Spectre.Console.Cli](https://spectreconsole.net/cli/) (argument
 parsing, subcommands, `--help`/`--version`). Same filter chain, same ffmpeg dependency as the
-PowerShell script — this adds an interactive picker for the input file and prompts for the rest of
-the settings instead of positional/named parameters.
+PowerShell script (see the [root README](../README.md) for what the filter chain does) — this adds
+an interactive picker for the input file and prompts for the rest of the settings instead of
+positional/named parameters.
 
 ## Structure
 
