@@ -1,17 +1,22 @@
 # Sermon Cleanup
 
-A PowerShell script for cleaning up sermon audio recordings using ffmpeg.
+Two independent implementations of the same sermon-audio cleanup pipeline, kept behaviorally
+equivalent (same filter chain, same default loudness targets):
 
-There's also an interactive C# console variant (Spectre.Console) with the same filter chain — see
-[`csharp/README.md`](csharp/README.md). Install it with one command:
+- [`powershell/`](powershell/README.md) — a single-file PowerShell script (the original).
+- [`csharp/`](csharp/README.md) — an interactive C# console rewrite (Spectre.Console front end).
+  Install it with one command:
 
-```powershell
-irm https://raw.githubusercontent.com/jonnochoo/sermon-cleanup/main/install.ps1 | iex
-```
+  ```powershell
+  irm https://raw.githubusercontent.com/jonnochoo/sermon-cleanup/main/install.ps1 | iex
+  ```
+
+Both require [ffmpeg](https://ffmpeg.org/download.html) available in your `PATH`. See each
+variant's README for install/usage/parameters.
 
 ## What it does
 
-`clean-sermon.ps1` runs a recording through a filter chain to make it sound more polished and consistent:
+Runs a recording through a filter chain to make it sound more polished and consistent:
 
 1. **Highpass filter** — removes rumble and mic handling noise below 90Hz
 2. **Soft clip mitigation** — gently rounds off harsh clipped peaks
@@ -70,36 +75,3 @@ Output is rendered as an MP3 (44.1kHz, 192kbps).
 - **LUFS** (Loudness Units Full Scale) — a perceptual loudness measurement, similar to volume as a listener actually hears it, rather than a raw peak amplitude. `-16 LUFS` is a common target for spoken-word/podcast content.
 - **True Peak (dBTP)** — the highest instantaneous signal level, including peaks that occur *between* samples (which a simple peak meter can miss). Keeping this below 0 dBTP avoids clipping on playback devices that reconstruct the waveform.
 - **LRA** (Loudness Range) — how much the loudness varies over the course of the recording, in loudness units. A lower LRA means more consistent volume throughout; a higher LRA preserves more natural dynamic variation.
-
-## Requirements
-
-- [ffmpeg](https://ffmpeg.org/download.html) available in your `PATH`
-- PowerShell
-
-## Usage
-
-```powershell
-.\clean-sermon.ps1 -InputFile "sermon.wav"
-```
-
-With custom output file and loudness target:
-
-```powershell
-.\clean-sermon.ps1 -InputFile "sermon.wav" -OutputFile "sermon_clean.mp3" -TargetLUFS -16
-```
-
-If you hit an execution policy error, run instead:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\clean-sermon.ps1 -InputFile "sermon.wav"
-```
-
-### Parameters
-
-| Parameter | Default | Description |
-|---|---|---|
-| `-InputFile` | *(required)* | Path to the source recording |
-| `-OutputFile` | `<InputFile>_clean.mp3` | Path for the cleaned output |
-| `-TargetLUFS` | `-16` | Target integrated loudness |
-| `-TargetTP` | `-1.5` | Target true peak (dBTP) |
-| `-TargetLRA` | `11` | Target loudness range |
