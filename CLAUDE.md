@@ -51,10 +51,14 @@ path; nothing in CI actually invokes ffmpeg (it isn't installed on the runner).
 ### Cutting a release
 
 Trigger the [`Release` workflow](.github/workflows/release.yml) manually (Actions → Release → Run
-workflow) with a `version` input like `1.0.0`. It publishes a self-contained single-file `win-x64`
-build of `SermonCleanup.Cli`, renames it to the stable asset name `sermon-cleanup.exe`, and creates
-a GitHub release tagged `v<version>` with that exe attached and auto-generated notes. There's no
-separate tag-push step — the tag is created by `gh release create` as part of the workflow.
+workflow) with a `bump` input (`patch`/`minor`/`major`, default `patch`) to auto-increment from the
+latest release tag, or `bump: explicit` plus a `version` input (e.g. `1.2.0`) to set it directly.
+The "Determine version" step computes/validates the final `X.Y.Z` and exposes it as
+`steps.version.outputs.version` for the rest of the job. It then publishes a self-contained
+single-file `win-x64` build of `SermonCleanup.Cli`, renames it to the stable asset name
+`sermon-cleanup.exe`, and creates a GitHub release tagged `v<version>` with that exe attached and
+auto-generated notes. There's no separate tag-push step — the tag is created by `gh release create`
+as part of the workflow.
 
 `install.ps1` (repo root) is the one-command installer end users run
 (`irm .../install.ps1 | iex`): it looks up the latest release via the GitHub API, requires an

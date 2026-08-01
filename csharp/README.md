@@ -51,9 +51,11 @@ dotnet run --project SermonCleanup.Cli -- "sermon.wav"
 ### Publishing a standalone executable
 
 Releases are cut via the [`Release` workflow](../.github/workflows/release.yml)
-(Actions → Release → Run workflow, enter a version like `1.0.0`). It publishes a self-contained
-single-file `win-x64` build, tags it `v<version>`, and attaches `sermon-cleanup.exe` to a new
-GitHub release — this is what `install.ps1` downloads.
+(Actions → Release → Run workflow). Pick a `bump` of `patch` (default), `minor`, or `major` to
+auto-increment from the latest release tag, or `explicit` plus a `version` like `1.2.0` to set
+the version yourself. It publishes a self-contained single-file `win-x64` build, tags it
+`v<version>`, and attaches `sermon-cleanup.exe` to a new GitHub release — this is what
+`install.ps1` downloads.
 
 To build the same artifact locally:
 
