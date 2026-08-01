@@ -16,8 +16,19 @@ and prompts for the rest of the settings instead of positional/named parameters.
 
 ## Requirements
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download) — only needed if building from source
 - [ffmpeg](https://ffmpeg.org/download.html) available in your `PATH`
+
+## Install
+
+One command, no .NET SDK required (downloads a self-contained `sermon-cleanup.exe` from the
+latest [release](../../releases) and adds it to your PATH):
+
+```powershell
+irm https://raw.githubusercontent.com/jonnochoo/sermon-cleanup/main/install.ps1 | iex
+```
+
+Then run `sermon-cleanup` from a new terminal. Re-running the command upgrades in place.
 
 ## Usage
 
@@ -38,6 +49,15 @@ dotnet run --project SermonCleanup.Cli -- "sermon.wav"
 ```
 
 ### Publishing a standalone executable
+
+Releases are cut via the [`Release` workflow](../.github/workflows/release.yml)
+(Actions → Release → Run workflow). Pick a `bump` of `patch` (default), `minor`, or `major` to
+auto-increment from the latest release tag, or `explicit` plus a `version` like `1.2.0` to set
+the version yourself. It publishes a self-contained single-file `win-x64` build, tags it
+`v<version>`, and attaches `sermon-cleanup.exe` to a new GitHub release — this is what
+`install.ps1` downloads.
+
+To build the same artifact locally:
 
 ```
 dotnet publish SermonCleanup.Cli -c Release -r win-x64 --self-contained -p:PublishSingleFile=true

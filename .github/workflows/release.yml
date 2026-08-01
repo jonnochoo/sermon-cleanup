@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump (relative to the latest release)"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - explicit
+        default: patch
+      version:
+        description: "Explicit version, e.g. 1.2.0 (only used when bump = explicit)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+
+          if [ "${{ inputs.bump }}" = "explicit" ]; then
+            version="${{ inputs.version }}"
+            if [ -z "$version" ]; then
+              echo "::error::bump=explicit requires the 'version' input to be set."
+              exit 1
+            fi
+            version="${version#v}"
+          else
+            latest_tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || true)
+            latest="${latest_tag#v}"
+            latest="${latest:-0.0.0}"
+
+            IFS='.' read -r major minor patch <<< "$latest"
+            case "${{ inputs.bump }}" in
+              major) major=$((major + 1)); minor=0; patch=0 ;;
+              minor) minor=$((minor + 1)); patch=0 ;;
+              patch) patch=$((patch + 1)) ;;
+            esac
+            version="$major.$minor.$patch"
+          fi
+
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must look like X.Y.Z (got '$version')"
+            exit 1
+          fi
+
+          echo "Resolved version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish win-x64 executable
+        run: >
+          dotnet publish csharp/SermonCleanup.Cli
+          -c Release
+          -r win-x64
+          --self-contained
+          -p:PublishSingleFile=true
+          -p:Version=${{ steps.version.outputs.version }}
+          -o publish
+
+      - name: Rename to a stable asset name
+        run: mv publish/SermonCleanup.Cli.exe publish/sermon-cleanup.exe
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            publish/sermon-cleanup.exe \
+            --title "v${{ steps.version.outputs.version }}" \
+            --generate-notes
