@@ -3,7 +3,11 @@
 A PowerShell script for cleaning up sermon audio recordings using ffmpeg.
 
 There's also an interactive C# console variant (Spectre.Console) with the same filter chain — see
-[`csharp/README.md`](csharp/README.md).
+[`csharp/README.md`](csharp/README.md). Install it with one command:
+
+```powershell
+irm https://raw.githubusercontent.com/jonnochoo/sermon-cleanup/main/install.ps1 | iex
+```
 
 ## What it does
 
