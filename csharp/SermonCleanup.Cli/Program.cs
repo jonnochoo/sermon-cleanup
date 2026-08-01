@@ -12,6 +12,9 @@ app.Configure(config =>
 
     config.AddCommand<UpdateCommand>("update")
         .WithDescription("Update sermon-cleanup to the latest release.");
+
+    config.AddCommand<VerifyCommand>("verify")
+        .WithDescription("Check that ffmpeg is installed, and offer to install it via winget if not.");
 });
 
 return await app.RunAsync(args);

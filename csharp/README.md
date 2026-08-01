@@ -9,19 +9,24 @@ the settings instead of positional/named parameters.
 ## Structure
 
 - **`SermonCleanup.Core`** — domain logic: builds the ffmpeg filter chain, runs the two-pass
-  loudnorm analysis/render, parses ffmpeg's JSON output, and checks/applies self-updates from
-  GitHub releases (`SelfUpdater`). No console or UI code; it only knows about `CleanupOptions` in
-  and a `CleanupResult` (or `SermonCleanupException`) out.
+  loudnorm analysis/render, parses ffmpeg's JSON output, checks/applies self-updates from GitHub
+  releases (`SelfUpdater`), and checks for/installs ffmpeg via winget (`FfmpegInstaller`). No
+  console or UI code; it only knows about `CleanupOptions` in and a `CleanupResult` (or
+  `SermonCleanupException`) out.
 - **`SermonCleanup.Cli`** — the Spectre.Console front end: `Program.cs` just wires up a
-  `Spectre.Console.Cli` `CommandApp` with two commands, `CleanCommand` (the interactive file
-  browser, prompts, progress spinner, result tables) and `UpdateCommand` (checks/applies an
-  update). Contains no ffmpeg or update logic itself — it only calls into `SermonCleanup.Core`.
+  `Spectre.Console.Cli` `CommandApp` with three commands — `CleanCommand` (the interactive file
+  browser, prompts, progress spinner, result tables), `UpdateCommand` (checks/applies an update),
+  and `VerifyCommand` (checks ffmpeg, offers to install it). Contains no ffmpeg, update, or
+  install logic itself — it only calls into `SermonCleanup.Core`.
 - **`SermonCleanup.Tests`** — xUnit tests for `SermonCleanup.Core`.
 
 ## Commands
 
 - `sermon-cleanup clean [INPUT]` — the interactive cleanup flow. `INPUT` is optional; omit it to
   pick a file from the interactive browser.
+- `sermon-cleanup verify` — checks that ffmpeg is in `PATH`, and offers to install it via winget
+  (`Gyan.FFmpeg`) if not, falling back to a link to https://ffmpeg.org/download.html if winget
+  isn't available either.
 - `sermon-cleanup update` — checks the latest GitHub release and, if newer, downloads and swaps in
   the new `sermon-cleanup.exe` (only works for an installed exe, not `dotnet run`).
 - `sermon-cleanup` (no arguments) or `--help` — lists the commands above.

@@ -108,23 +108,31 @@ The C# solution is deliberately split so domain logic never depends on the conso
     than re-listing extensions.
 
 - **`SermonCleanup.Cli`** — Spectre.Console + Spectre.Console.Cli. `Program.cs` just builds a
-  `CommandApp`, registers `CleanCommand`/`UpdateCommand` via `config.AddCommand<T>(name)`, and sets
-  `SetApplicationVersion(AppVersion.Current)`. **No default command is set on purpose** — that's
-  what makes bare `sermon-cleanup`/`--help` print the generated command list instead of launching
-  straight into `clean`. A new command is just another `AddCommand<T>` call. Note:
-  `ExecuteAsync` on this Spectre.Console.Cli version takes a `CancellationToken` and is `protected
-  override`, not `public override`.
+  `CommandApp`, registers `CleanCommand`/`UpdateCommand`/`VerifyCommand` via
+  `config.AddCommand<T>(name)`, and sets `SetApplicationVersion(AppVersion.Current)`. **No default
+  command is set on purpose** — that's what makes bare `sermon-cleanup`/`--help` print the
+  generated command list instead of launching straight into `clean`. A new command is just another
+  `AddCommand<T>` call. Note: `ExecuteAsync` on this Spectre.Console.Cli version takes a
+  `CancellationToken` and is `protected override`, not `public override`.
   - `CleanCommand` holds the interactive flow (prompts/summary/progress/results) that used to live
     in `Program.cs` directly; `FileBrowser.SelectInputFile` is the interactive directory walker
     (default start dir: `FileBrowser.GetDefaultStartDirectory()`, the user's Downloads folder).
   - `UpdateCommand` calls `SelfUpdater` (Core) to check/apply an update, and refuses to run unless
     `SelfUpdater.TryGetCurrentExecutablePath` confirms the process is a published exe rather than
     `dotnet`-hosted (`dotnet run`) — there's nothing sensible to self-update in that case.
-  - Neither command contains ffmpeg args or update-download logic — that belongs in Core.
-    Interactive prompts require a real console (can't read piped stdin), so non-interactive repros
-    should call `SermonCleaner`/`SelfUpdater` directly rather than driving a command.
+  - `VerifyCommand` calls `SermonCleaner.IsFfmpegAvailable()` and, if it's missing, offers to
+    install ffmpeg via `FfmpegInstaller` (Core, wraps `winget install --id Gyan.FFmpeg`) — falling
+    back to a plain link to ffmpeg.org if `FfmpegInstaller.IsWingetAvailable()` says winget itself
+    isn't there. `CleanCommand`'s ffmpeg-missing message points here rather than repeating install
+    instructions inline.
+  - None of the commands contain ffmpeg args, update-download, or install logic — that belongs in
+    Core. Interactive prompts require a real console (can't read piped stdin), so non-interactive
+    repros should call `SermonCleaner`/`SelfUpdater`/`FfmpegInstaller` directly rather than driving
+    a command.
 
 - **`SermonCleanup.Tests`** — xUnit, references only `SermonCleanup.Core` (no UI to test).
-  `SelfUpdater.IsUpdateAvailable`/`TryGetCurrentExecutablePath` are pure and tested directly;
-  `GetLatestReleaseAsync`/`ApplyUpdateAsync` were instead verified manually against the real GitHub
-  API/release during development rather than mocked.
+  `SelfUpdater.IsUpdateAvailable`/`TryGetCurrentExecutablePath` and
+  `FfmpegInstaller.IsWingetAvailable` are pure/side-effect-light and tested directly;
+  `GetLatestReleaseAsync`/`ApplyUpdateAsync`/`FfmpegInstaller.InstallAsync` were instead verified
+  manually (real GitHub API/release, and PATH-masking to hit the missing-ffmpeg/missing-winget
+  branches) during development rather than mocked.
