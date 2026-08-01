@@ -24,7 +24,7 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
 
         if (!SermonCleaner.IsFfmpegAvailable())
         {
-            AnsiConsole.MarkupLine("[red]ffmpeg was not found in PATH.[/] Install it from https://ffmpeg.org/download.html and try again.");
+            AnsiConsole.MarkupLine("[red]ffmpeg was not found in PATH.[/] Run [grey]sermon-cleanup verify[/] for install help, or see https://ffmpeg.org/download.html.");
             return 1;
         }
 
