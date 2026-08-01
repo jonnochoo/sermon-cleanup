@@ -35,6 +35,11 @@ jobs:
         run: |
           set -e
 
+          if [ -n "${{ inputs.version }}" ] && [ "${{ inputs.bump }}" != "explicit" ]; then
+            echo "::error::'version' was set to '${{ inputs.version }}' but 'bump' is '${{ inputs.bump }}', not 'explicit' — it would be silently ignored. Set bump to 'explicit' to use a specific version."
+            exit 1
+          fi
+
           if [ "${{ inputs.bump }}" = "explicit" ]; then
             version="${{ inputs.version }}"
             if [ -z "$version" ]; then
