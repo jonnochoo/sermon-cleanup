@@ -42,4 +42,27 @@ public class CleanCommandPromptTests
 
         Assert.Equal(-20.0, target.Value);
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void PromptTarget_calls_tryCreate_exactly_once_for_the_accepted_value(bool acceptDefault)
+    {
+        var console = new TestConsole();
+        if (acceptDefault)
+            console.Input.PushKey(ConsoleKey.Enter);
+        else
+            console.Input.PushTextWithEnter("-18.5");
+
+        var callCount = 0;
+        bool CountingTryCreate(double value, out LufsTarget target, out string? error)
+        {
+            callCount++;
+            return LufsTarget.TryCreate(value, out target, out error);
+        }
+
+        CleanCommand.PromptTarget<LufsTarget>(console, "Target integrated loudness:", -16.0, CountingTryCreate);
+
+        Assert.Equal(1, callCount);
+    }
 }
