@@ -86,17 +86,19 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
 
     private delegate bool TryCreateTarget<T>(double value, out T target, out string? error);
 
-    // Captures the value type built by TryCreate inside Validate, rather than re-parsing
-    // the raw double a second time via Create once the prompt returns.
+    // Validate() only runs when the user types a value — Spectre returns DefaultValue directly
+    // on blank input without calling it — so the accepted double is always parsed once here,
+    // after the prompt returns, rather than relying on Validate() to have populated a closure.
     private static T PromptTarget<T>(string prompt, double defaultValue, TryCreateTarget<T> tryCreate)
     {
-        var target = default(T)!;
-        AnsiConsole.Prompt(
+        var value = AnsiConsole.Prompt(
             new TextPrompt<double>(prompt)
                 .DefaultValue(defaultValue)
-                .Validate(v => tryCreate(v, out target, out var error)
+                .Validate(v => tryCreate(v, out _, out var error)
                     ? ValidationResult.Success()
                     : ValidationResult.Error(error!)));
+
+        tryCreate(value, out var target, out _);
         return target;
     }
 
