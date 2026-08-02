@@ -70,14 +70,9 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         var outputFile = AnsiConsole.Prompt(
             new TextPrompt<string>("Output file:").DefaultValue(defaultOutput));
 
-        var targetLufs = AnsiConsole.Prompt(
-            new TextPrompt<double>("Target integrated loudness [grey](LUFS)[/]:").DefaultValue(-16.0));
-
-        var targetTp = AnsiConsole.Prompt(
-            new TextPrompt<double>("Target true peak [grey](dBTP)[/]:").DefaultValue(-1.5));
-
-        var targetLra = AnsiConsole.Prompt(
-            new TextPrompt<double>("Target loudness range [grey](LRA)[/]:").DefaultValue(11.0));
+        var targetLufs = PromptTarget<LufsTarget>("Target integrated loudness [grey](LUFS)[/]:", -16.0, LufsTarget.TryCreate);
+        var targetTp = PromptTarget<TruePeakTarget>("Target true peak [grey](dBTP)[/]:", -1.5, TruePeakTarget.TryCreate);
+        var targetLra = PromptTarget<LoudnessRangeTarget>("Target loudness range [grey](LRA)[/]:", 11.0, LoudnessRangeTarget.TryCreate);
 
         return new CleanupOptions
         {
@@ -89,14 +84,30 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         };
     }
 
+    private delegate bool TryCreateTarget<T>(double value, out T target, out string? error);
+
+    // Captures the value type built by TryCreate inside Validate, rather than re-parsing
+    // the raw double a second time via Create once the prompt returns.
+    private static T PromptTarget<T>(string prompt, double defaultValue, TryCreateTarget<T> tryCreate)
+    {
+        var target = default(T)!;
+        AnsiConsole.Prompt(
+            new TextPrompt<double>(prompt)
+                .DefaultValue(defaultValue)
+                .Validate(v => tryCreate(v, out target, out var error)
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error(error!)));
+        return target;
+    }
+
     private static void PrintSummary(CleanupOptions options)
     {
         var summary = new Table().Border(TableBorder.Rounded).AddColumn("Setting").AddColumn("Value");
         summary.AddRow("Input", Markup.Escape(options.InputFile));
         summary.AddRow("Output", Markup.Escape(options.OutputFile));
-        summary.AddRow("Target LUFS", options.TargetLufs.ToString(CultureInfo.InvariantCulture));
-        summary.AddRow("Target TP", $"{options.TargetTp.ToString(CultureInfo.InvariantCulture)} dBTP");
-        summary.AddRow("Target LRA", options.TargetLra.ToString(CultureInfo.InvariantCulture));
+        summary.AddRow("Target LUFS", options.TargetLufs.ToString());
+        summary.AddRow("Target TP", $"{options.TargetTp} dBTP");
+        summary.AddRow("Target LRA", options.TargetLra.ToString());
         AnsiConsole.Write(summary);
     }
 
