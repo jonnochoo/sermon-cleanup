@@ -70,33 +70,35 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         var outputFile = AnsiConsole.Prompt(
             new TextPrompt<string>("Output file:").DefaultValue(defaultOutput));
 
-        var targetLufs = AnsiConsole.Prompt(
-            new TextPrompt<double>("Target integrated loudness [grey](LUFS)[/]:")
-                .DefaultValue(-16.0)
-                .Validate(v => Validate(LufsTarget.TryCreate(v, out _, out var error), error)));
-
-        var targetTp = AnsiConsole.Prompt(
-            new TextPrompt<double>("Target true peak [grey](dBTP)[/]:")
-                .DefaultValue(-1.5)
-                .Validate(v => Validate(TruePeakTarget.TryCreate(v, out _, out var error), error)));
-
-        var targetLra = AnsiConsole.Prompt(
-            new TextPrompt<double>("Target loudness range [grey](LRA)[/]:")
-                .DefaultValue(11.0)
-                .Validate(v => Validate(LoudnessRangeTarget.TryCreate(v, out _, out var error), error)));
+        var targetLufs = PromptTarget<LufsTarget>("Target integrated loudness [grey](LUFS)[/]:", -16.0, LufsTarget.TryCreate);
+        var targetTp = PromptTarget<TruePeakTarget>("Target true peak [grey](dBTP)[/]:", -1.5, TruePeakTarget.TryCreate);
+        var targetLra = PromptTarget<LoudnessRangeTarget>("Target loudness range [grey](LRA)[/]:", 11.0, LoudnessRangeTarget.TryCreate);
 
         return new CleanupOptions
         {
             InputFile = inputFile,
             OutputFile = outputFile,
-            TargetLufs = LufsTarget.Create(targetLufs),
-            TargetTp = TruePeakTarget.Create(targetTp),
-            TargetLra = LoudnessRangeTarget.Create(targetLra)
+            TargetLufs = targetLufs,
+            TargetTp = targetTp,
+            TargetLra = targetLra
         };
     }
 
-    private static ValidationResult Validate(bool isValid, string? error) =>
-        isValid ? ValidationResult.Success() : ValidationResult.Error(error!);
+    private delegate bool TryCreateTarget<T>(double value, out T target, out string? error);
+
+    // Captures the value type built by TryCreate inside Validate, rather than re-parsing
+    // the raw double a second time via Create once the prompt returns.
+    private static T PromptTarget<T>(string prompt, double defaultValue, TryCreateTarget<T> tryCreate)
+    {
+        var target = default(T)!;
+        AnsiConsole.Prompt(
+            new TextPrompt<double>(prompt)
+                .DefaultValue(defaultValue)
+                .Validate(v => tryCreate(v, out target, out var error)
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error(error!)));
+        return target;
+    }
 
     private static void PrintSummary(CleanupOptions options)
     {
