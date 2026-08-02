@@ -70,9 +70,9 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         var outputFile = AnsiConsole.Prompt(
             new TextPrompt<string>("Output file:").DefaultValue(defaultOutput));
 
-        var targetLufs = PromptTarget<LufsTarget>("Target integrated loudness [grey](LUFS)[/]:", -16.0, LufsTarget.TryCreate);
-        var targetTp = PromptTarget<TruePeakTarget>("Target true peak [grey](dBTP)[/]:", -1.5, TruePeakTarget.TryCreate);
-        var targetLra = PromptTarget<LoudnessRangeTarget>("Target loudness range [grey](LRA)[/]:", 11.0, LoudnessRangeTarget.TryCreate);
+        var targetLufs = PromptTarget<LufsTarget>(AnsiConsole.Console, "Target integrated loudness [grey](LUFS)[/]:", -16.0, LufsTarget.TryCreate);
+        var targetTp = PromptTarget<TruePeakTarget>(AnsiConsole.Console, "Target true peak [grey](dBTP)[/]:", -1.5, TruePeakTarget.TryCreate);
+        var targetLra = PromptTarget<LoudnessRangeTarget>(AnsiConsole.Console, "Target loudness range [grey](LRA)[/]:", 11.0, LoudnessRangeTarget.TryCreate);
 
         return new CleanupOptions
         {
@@ -84,20 +84,35 @@ internal sealed class CleanCommand : AsyncCommand<CleanCommand.Settings>
         };
     }
 
-    private delegate bool TryCreateTarget<T>(double value, out T target, out string? error);
+    internal delegate bool TryCreateTarget<T>(double value, out T target, out string? error);
 
-    // Captures the value type built by TryCreate inside Validate, rather than re-parsing
-    // the raw double a second time via Create once the prompt returns.
-    private static T PromptTarget<T>(string prompt, double defaultValue, TryCreateTarget<T> tryCreate)
+    // Validate() only runs when the user types a value — Spectre returns DefaultValue directly
+    // on blank input without ever calling it — so a typed value is parsed once, inside Validate(),
+    // and captured via the closure below; the fallback tryCreate() after the prompt returns only
+    // fires for the default-accepted path, where Validate() never ran.
+    // Takes an explicit IAnsiConsole (rather than the static AnsiConsole) so tests can drive it
+    // with Spectre.Console.Testing's TestConsole.
+    internal static T PromptTarget<T>(IAnsiConsole console, string prompt, double defaultValue, TryCreateTarget<T> tryCreate)
     {
-        var target = default(T)!;
-        AnsiConsole.Prompt(
+        T? target = default;
+        var validated = false;
+
+        var value = console.Prompt(
             new TextPrompt<double>(prompt)
                 .DefaultValue(defaultValue)
-                .Validate(v => tryCreate(v, out target, out var error)
-                    ? ValidationResult.Success()
-                    : ValidationResult.Error(error!)));
-        return target;
+                .Validate(v =>
+                {
+                    if (!tryCreate(v, out var candidate, out var error))
+                        return ValidationResult.Error(error!);
+                    target = candidate;
+                    validated = true;
+                    return ValidationResult.Success();
+                }));
+
+        if (!validated)
+            tryCreate(value, out target, out _);
+
+        return target!;
     }
 
     private static void PrintSummary(CleanupOptions options)
